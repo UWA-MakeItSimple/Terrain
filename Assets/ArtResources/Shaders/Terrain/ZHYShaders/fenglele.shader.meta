@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: e6c760c4f3ffe31448cc02dac4f4caed
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _BlendTex: {fileID: 2800000, guid: c2234e57c253e3f48aaf68171f8e7163, type: 3}
+  - _BlockMainTex: {fileID: 2800000, guid: ee5941191694d0e478ac39e89688e1ac, type: 3}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
