@@ -19,6 +19,7 @@ public static class MTMatUtils
             return;
         string mathPath = MTWorldConfig.GetMaterialAssetPath(tileName, matIdx);
         //alpha map
+        //t.terrainData.SetAlphamaps();
         byte[] alphaMapData = t.terrainData.alphamapTextures[matIdx].EncodeToTGA();
         string alphaMapSavePath = MTWorldConfig.GetTerrainAlphaAssetPath(tileName, matIdx);
         FileStream stream = File.Open(alphaMapSavePath, FileMode.Create);
