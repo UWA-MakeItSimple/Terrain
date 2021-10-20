@@ -16,7 +16,11 @@ public class FastTerrain : MonoBehaviour
     public Texture2D splatWeight;
     public Shader terrainShader;
     public TerrainData normalTerrainData;
+<<<<<<< Updated upstream
     public TerrainData emptyTerrainData;
+=======
+    public TerrainData empytTerrainData;
+>>>>>>> Stashed changes
     [ContextMenu("MakeAlbedoAtlas")]
     // Update is called once per frame
     void MakeAlbedoAtlas()
@@ -45,8 +49,8 @@ public class FastTerrain : MonoBehaviour
 
         albedoAtlas.Apply();
         normalAtlas.Apply();
-        File.WriteAllBytes(Application.dataPath+"/albedoAtlas.png",albedoAtlas.EncodeToPNG());
-        File.WriteAllBytes(Application.dataPath+"/normalAtlas.png",normalAtlas.EncodeToPNG());
+        File.WriteAllBytes(Application.dataPath+"/albedoAtlas_0.png",albedoAtlas.EncodeToPNG());
+        File.WriteAllBytes(Application.dataPath+"/normalAtlas_0.png",normalAtlas.EncodeToPNG());
         DestroyImmediate(albedoAtlas);
         DestroyImmediate(normalAtlas);
     }

@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<< Updated upstream:Assets/ZHY/Shaders/jackie_fast/Standard-FirstPassFast.shader.meta
 guid: fd39d31fc2dc3ac4f9b33b6ee0b111a4
+=======
+guid: 4af946fbbdc476c438335e81485752df
+>>>>>>> Stashed changes:Assets/ZHY/Shaders/Standard-FirstPassFast.shader.meta
 ShaderImporter:
   externalObjects: {}
   defaultTextures: []
