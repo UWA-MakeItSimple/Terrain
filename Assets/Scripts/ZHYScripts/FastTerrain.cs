@@ -16,7 +16,8 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
     public Texture2D splatWeight;
     public Shader terrainShader;
     public TerrainData normalTerrainData;
-    public TerrainData emptyTerrainData;
+    public TerrainData empytTerrainData;
+    int adgeAdd ;
     [ContextMenu("MakeAlbedoAtlas")]
     // Update is called once per frame
     void MakeAlbedoAtlas()
@@ -24,12 +25,16 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
 
         int sqrCount = 4;
         int wid = normalTerrainData.splatPrototypes[0].texture.width;
+<<<<<<< Updated upstream:Assets/Scripts/ZHYScripts/FastTerrain.cs
         int hei = normalTerrainData.splatPrototypes[0].texture.height;
+=======
+        int hei =normalTerrainData.splatPrototypes[0].texture.height;
+        adgeAdd = 1;
+>>>>>>> Stashed changes:Assets/ZHY/Scripts/FastTerrain.cs
 
-
-        albedoAtlas = new Texture2D(sqrCount * wid, sqrCount * hei, TextureFormat.RGBA32, true);
-        normalAtlas = new Texture2D(sqrCount * wid, sqrCount * hei, TextureFormat.RGBA32, true);
-
+        albedoAtlas = new Texture2D(sqrCount * wid +  adgeAdd*sqrCount*2, sqrCount * hei + adgeAdd * sqrCount * 2, TextureFormat.RGBA32, true);
+        normalAtlas = new Texture2D(sqrCount * wid + adgeAdd * sqrCount * 2, sqrCount * hei + adgeAdd * sqrCount * 2, TextureFormat.RGBA32, true);
+        print(albedoAtlas.width);
         for (int i = 0; i < sqrCount; i++)
         {
             for (int j = 0; j < sqrCount; j++)
@@ -37,10 +42,15 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
                 int index = i * sqrCount + j;
 
                 if (index >= normalTerrainData.splatPrototypes.Length) break;
+<<<<<<< Updated upstream:Assets/Scripts/ZHYScripts/FastTerrain.cs
                 albedoAtlas.SetPixels(j * (wid), i * (hei), wid, hei, // SetPixels()设置像素颜色块：接收一个颜色数组，然后更改纹理的整个 Mip 级别的像素颜色
                     normalTerrainData.splatPrototypes[index].texture.GetPixels()); // GetPixels(): Returns in pixels[] a copy of the data in the bitmap. Each value is a packed int representing a Color.
                 // normalAtlas.SetPixels(j * (wid), i * (hei), wid, hei,
                 //    normalTerrainData.splatPrototypes[index].normalMap.GetPixels());
+=======
+                copyToAltas(normalTerrainData.splatPrototypes[index].texture, albedoAtlas, i, j, wid, hei);
+                copyToAltas(normalTerrainData.splatPrototypes[index].normalMap, normalAtlas, i, j, wid, hei);
+>>>>>>> Stashed changes:Assets/ZHY/Scripts/FastTerrain.cs
             }
         }
 
@@ -51,7 +61,81 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
         DestroyImmediate(albedoAtlas);
         DestroyImmediate(normalAtlas);
     }
+    private void copyToAltas(Texture2D src, Texture2D texture, int i, int j, int wid, int hei)
+    {
+     
+        if (src == null) return;
+        //原始像素
+        texture.SetPixels(j * (wid + 2 * adgeAdd) + adgeAdd, i * (hei + 2 * adgeAdd) + adgeAdd, wid, hei, src.GetPixels());
+     
+        //加4条边
 
+        var lineColors = src.GetPixels(wid - 1, 0, 1, hei);
+        var fillColor = new Color[hei * adgeAdd];
+        for (int k = 0; k < hei * adgeAdd; k++)
+        {
+            fillColor[k] = lineColors[k % hei];
+        }
+        texture.SetPixels(j * (wid + 2 * adgeAdd), i * (hei + 2 * adgeAdd) + adgeAdd, adgeAdd, hei, fillColor);
+
+        lineColors = src.GetPixels(0, 0, 1, hei);
+        for (int k = 0; k < hei * adgeAdd; k++)
+        {
+            fillColor[k] = lineColors[k % hei];
+        }
+        texture.SetPixels(j * (wid + 2 * adgeAdd) + wid + adgeAdd, i * (hei + 2 * adgeAdd) + adgeAdd, adgeAdd, hei, fillColor);
+
+        fillColor = new Color[wid * adgeAdd];
+        lineColors = src.GetPixels(0, hei - 1, wid, 1);
+        for (int k = 0; k < wid * adgeAdd; k++)
+        {
+            fillColor[k] = lineColors[k % wid];
+        }
+
+        texture.SetPixels(j * (wid + 2 * adgeAdd) + adgeAdd, i * (hei + 2 * adgeAdd), wid, adgeAdd, fillColor);
+        lineColors = src.GetPixels(0, 0, wid, 1);
+        for (int k = 0; k < wid * adgeAdd; k++)
+        {
+            fillColor[k] = lineColors[k % wid];
+        }
+
+        texture.SetPixels(j * (wid + 2 * adgeAdd) + adgeAdd, i * (hei + 2 * adgeAdd) + hei + adgeAdd, wid, adgeAdd, fillColor);
+
+
+        //加4个角
+        var cornerColor = src.GetPixel(0, hei - 1);
+        fillColor = new Color[adgeAdd * adgeAdd];
+        for (int k = 0; k < fillColor.Length; k++)
+        {
+            fillColor[k] = cornerColor;
+        }
+        texture.SetPixels(j * (wid + 2 * adgeAdd), i * (hei + 2 * adgeAdd), adgeAdd, adgeAdd, fillColor);
+        cornerColor = src.GetPixel(0, 0);
+
+        for (int k = 0; k < fillColor.Length; k++)
+        {
+            fillColor[k] = cornerColor;
+        }
+        texture.SetPixels(j * (wid + 2 * adgeAdd), i * (hei + 2 * adgeAdd) + hei + adgeAdd, adgeAdd, adgeAdd, fillColor);
+
+        cornerColor = src.GetPixel(wid - 1, hei - 1);
+
+        for (int k = 0; k < fillColor.Length; k++)
+        {
+            fillColor[k] = cornerColor;
+        }
+        texture.SetPixels(j * (wid + 2 * adgeAdd) + adgeAdd + wid, i * (hei + 2 * adgeAdd), adgeAdd, adgeAdd, fillColor);
+
+
+        cornerColor = src.GetPixel(wid - 1, 0);
+
+        for (int k = 0; k < fillColor.Length; k++)
+        {
+            fillColor[k] = cornerColor;
+        }
+        texture.SetPixels(j * (wid + 2 * adgeAdd) + adgeAdd + wid, i * (hei + 2 * adgeAdd) + hei + adgeAdd, adgeAdd, adgeAdd, fillColor);
+
+    }
 
     struct SplatData
     {
@@ -82,19 +166,24 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
         splatID.filterMode = FilterMode.Point;
 
         var splatIDColors = splatID.GetPixels();
+<<<<<<< Updated upstream:Assets/Scripts/ZHYScripts/FastTerrain.cs
 
         // 改用图片文件时可设置压缩为R8 代码生成有格式限制 空间有点浪费
         splatWeight = new Texture2D(wid, hei, TextureFormat.RGB24, false, true);
         splatWeight.filterMode = FilterMode.Bilinear;
         var splatWeightColors = splatWeight.GetPixels();
 
+=======
+  
+ 
+>>>>>>> Stashed changes:Assets/ZHY/Scripts/FastTerrain.cs
         for (int i = 0; i < hei; i++)
         {
             for (int j = 0; j < wid; j++)
             {
                 List<SplatData> splatDatas = new List<SplatData>();
                 int index = i * wid + j;
-
+   // splatIDColors[index].r=1 / 16.0f;
                 //struct 是值引用 所以 Add到list后  可以复用（修改他属性不会影响已经加入的数据）
                 for (int k = 0; k < colors.Count; k++)
                 {
@@ -120,8 +209,9 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
                     splatDatas.Add(sd);
                 }
 
-
+            
                 //按权重排序选出最重要几个
+<<<<<<< Updated upstream:Assets/Scripts/ZHYScripts/FastTerrain.cs
                 splatDatas.Sort((x, y) => -(x.weight + x.nearWeight / 2).CompareTo(y.weight + y.nearWeight / 2)); // x.weight + x.nearWeight / 2 ???
 
                 // 把最大权重的splatmap通道id值给了splatIDColors的r通道
@@ -155,20 +245,36 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
                 splatIDColors[index].r = splatDatas[swapID].id / 16f;
                 splatIDColors[index].g = splatDatas[1 - swapID].id / 16f;
                 splatIDColors[index].b = 0;
+=======
+               splatDatas.Sort((x, y) => -(x.weight+x.nearWeight).CompareTo(y.weight+y.nearWeight));
+       
+ 
+>>>>>>> Stashed changes:Assets/ZHY/Scripts/FastTerrain.cs
 
-                splatWeightColors[index].r =
-                    splatDatas[swapID].weight +
-                    (1 - splatDatas[0].weight - splatDatas[1].weight) / 2; //2张以后丢弃的权重平均加到这2张
 
+<<<<<<< Updated upstream:Assets/Scripts/ZHYScripts/FastTerrain.cs
                 splatWeightColors[index].g = splatWeightColors[index].b = 0; // 权重图只有一个通道
+=======
+                //只存最重要3个图层 用一点压缩方案可以一张图存更多图层 ,这里最多支持16张
+                splatIDColors[index].r = splatDatas[0].id / 16f; //
+                 splatIDColors[index].g = splatDatas[1].id / 16f;
+                 splatIDColors[index].b =  splatDatas[2].id / 16f;
+  
+>>>>>>> Stashed changes:Assets/ZHY/Scripts/FastTerrain.cs
             }
         }
 
         splatID.SetPixels(splatIDColors);
         splatID.Apply();
 
+        // 改用图片文件时可设置压缩为R8 代码生成有格式限制 空间有点浪费
+        splatWeight = new Texture2D(wid*2, hei*2,normalTerrainData.alphamapTextures[0].format, true, true);
+        splatWeight.filterMode = FilterMode.Bilinear;
+        for (int i = 0; i < normalTerrainData.alphamapTextures.Length; i++)
+        {
+            splatWeight.SetPixels((i%2)*wid,(i/2)*hei,wid,hei,normalTerrainData.alphamapTextures[i].GetPixels());
+        }
 
-        splatWeight.SetPixels(splatWeightColors);
         splatWeight.Apply();
     }
 
@@ -176,7 +282,7 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
     private float getNearWeight(Color[] colors, int index, int wid, int rgba)
     {
         float value = 0;
-        for (int i = 1; i <= 3; i++)
+        for (int i = 1; i <= 2; i++)
         {
             value += colors[(index + colors.Length - i) % colors.Length][rgba];
             value += colors[(index + colors.Length + i) % colors.Length][rgba];
@@ -188,7 +294,7 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
             value += colors[(index + colors.Length + (1 + wid) * i) % colors.Length][rgba];
         }
 
-        return value / (8 * 3);
+        return value / (8 * 2);
     }
 
 
@@ -197,7 +303,7 @@ public class FastTerrain : MonoBehaviour // MonoBehaviour 是一个基类，所�
     void useFastMode()
     {
         Terrain t = GetComponent<Terrain>();
-        t.terrainData = emptyTerrainData;
+        t.terrainData = empytTerrainData;
        
         // t.materialType = Terrain.MaterialType.Custom;
         if (t.materialTemplate == null)

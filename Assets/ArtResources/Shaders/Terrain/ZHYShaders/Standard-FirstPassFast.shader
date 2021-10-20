@@ -1,6 +1,6 @@
 // Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
-Shader "ZHYShaders/StandardFast" {
+Shader "Nature/Terrain/StandardFast" {
 	Properties {
 		// set by terrain engine
 		[HideInInspector] _Control ("Control (RGBA)", 2D) = "red" {}
@@ -51,7 +51,7 @@ Shader "ZHYShaders/StandardFast" {
 
 		#define TERRAIN_STANDARD_SHADER
 		#define TERRAIN_SURFACE_OUTPUT SurfaceOutputStandard
-		#include "TerrainSplatmapCommonFast.cginc"
+		 #include "TerrainSplatmapCommonFast.cginc"
 		//#include "temp.cginc"
 
 		half _Metallic0;
@@ -82,9 +82,8 @@ Shader "ZHYShaders/StandardFast" {
 	}
   
   
-	Dependency "AddPassShader" = "Hidden/TerrainEngine/Splatmap/Standard-AddPassFast"
+	 Dependency "AddPassShader" = "Hidden/TerrainEngine/Splatmap/Standard-AddPassFast"
 	Dependency "BaseMapShader" = "Hidden/TerrainEngine/Splatmap/Standard-Base"
-
 
 	Fallback "Nature/Terrain/Diffuse"
 }
