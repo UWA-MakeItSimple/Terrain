@@ -19,7 +19,7 @@ sampler2D _Control;
 float4 _Control_ST;
 sampler2D _Splat0,_Splat1,_Splat2,_Splat3;
 uniform sampler2D SpaltIDTex;
-  
+   
 UNITY_DECLARE_TEX2DARRAY(AlbedoAtlas);
 UNITY_DECLARE_TEX2DARRAY(NormalAtlas);
 UNITY_DECLARE_TEX2DARRAY(SpaltWeightTex);
@@ -41,85 +41,100 @@ void SplatmapVert(inout appdata_full v, out Input data)
     v.tangent.w = -1;
 
 }
- float getChannelValue(float4 clr,int index ){
  
- //return index==0?clr.r:(index==1?clr.g:(index==2?clr.b:clr.a));
- // 应该这样纯数学计算性能更高 （未测试验证）
- const uint  step=256;
-  uint v=(uint)(clr.r*step)+(uint)(clr.g*step)*step+(uint)(clr.b*step)*step*step+(uint)(clr.a*step)*step*step*step;
-   v/= (uint)(pow(step,(float)index)+0.5);
-  return (v%step)/(float)step;
-  
- }
+
 #ifdef TERRAIN_STANDARD_SHADER
-void SplatmapMix(Input IN, half4 defaultAlpha, out half4 splat_control, out half weight, out fixed4 mixedDiffuse, inout fixed3 mixedNormal)
+ void SplatmapMix(Input IN, half4 defaultAlpha, out half4 splat_control, out half weight, out fixed4 mixedDiffuse, inout fixed3 mixedNormal)
 #else
-void SplatmapMix(Input IN, out float4 splat_control, out half weight, out fixed4 mixedDiffuse, inout fixed3 mixedNormal)
+ void SplatmapMix(Input IN, out float4 splat_control, out half weight, out fixed4 mixedDiffuse, inout fixed3 mixedNormal)
 #endif
-{
+ {
+     half2 offsetFix = -half2(0.5, 0.5) / 1024.0;
+     splat_control = tex2D(SpaltIDTex, IN.tc_Control+ offsetFix);
+     float4  splat_control_1_0 = tex2D(SpaltIDTex, IN.tc_Control+ offsetFix +half2(1,0)/1024.0);
+     float4  splat_control_0_1 = tex2D(SpaltIDTex, IN.tc_Control+ offsetFix +half2(0,1)/1024.0);
+     float4  splat_control_1_1 = tex2D(SpaltIDTex, IN.tc_Control+ offsetFix +half2(1,1)/1024.0);
 
-    splat_control = tex2D(SpaltIDTex, IN.tc_Control);
-    
-     
-     
-    weight = 1;
+     //极大提高gpu渲染性能 因为做了如果周围是同图层就不做任何混合与插值计算
+     bool needMix = splat_control.b+ splat_control_1_0.b+ splat_control_0_1.b+ splat_control_1_1.b > 0.001;
 
-    #if !defined(SHADER_API_MOBILE) && defined(TERRAIN_SPLAT_ADDPASS)
-        clip(weight == 0.0f ? -1 : 1);
-    #endif
-float clipSize=1024;//单张图片大小  
-int clipCount=4;//4x4 16张的图集
-   
-float2 initScale = (IN.tc_Control*500/33);//terrain Size/ tile scale
- int id=(int)( splat_control.r*16+0.5);
+     weight = 1;
+
+#if !defined(SHADER_API_MOBILE) && defined(TERRAIN_SPLAT_ADDPASS)
+     clip(weight == 0.0f ? -1 : 1);
+#endif
+     float clipSize = 1024;//单张图片大小  
  
- float space = 1.0 / clipSize;
- float clipRepeatWid = (1.0 / clipCount - 2.0 *space);
- float2 initUVAlbedo = clipRepeatWid * frac(initScale) + space;
- float2 dx =  clamp(clipRepeatWid * ddx(initScale), -1.0/ clipCount/2, 1.0/ clipCount/2);
- float2 dy =  clamp(clipRepeatWid * ddy(initScale), -1.0/ clipCount/2, 1.0/ clipCount/2);
- int mipmap=(int)(0.5+ log2(max(sqrt(dot(dx, dx)), sqrt(dot(dy, dy)))*clipSize));
- space =( pow(2.0, mipmap)-0.5) / clipSize;
- clipRepeatWid = (1.0 / clipCount - 2.0 *space);
- initUVAlbedo = clipRepeatWid * frac(initScale) + space;
- 
-float2 dxSplat = clamp(0.5*ddx(IN.tc_Control), -1.0 / clipSize / 2, 1.0 / clipSize / 2);
-float2 dySplat = clamp(0.5* ddy(IN.tc_Control), -1.0 / clipSize / 2, 1.0 / clipSize / 2);
+     float2 initScale = (IN.tc_Control * 500 / 33);//terrain Size/ tile scale
+     int id = (int)(splat_control.r * 16 + 0.5);
 
-float3 uvR = float3(initScale,id);//
-half3 colorR = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvR);
- 
- //根据混合总和为1 把丢弃的部分算给 混合最多的 这样画面影响最小 而且 少采样一次又提升性能
-  // 
-  //
-   id=(int)( splat_control.g*16+0.5);
- float3 uvG= float3(initScale, id);//
- half3 colorG = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvG);
-
-   float weightG=  getChannelValue(UNITY_SAMPLE_TEX2DARRAY(SpaltWeightTex, float3(IN.tc_Control, id/4)),id%4);
-  
-      id=(int)( splat_control.b*16+0.5);
-	  float3 uvB = float3(initScale, id);//
-	  half3 colorB = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvB);
-
- 	  float weightB = getChannelValue(UNITY_SAMPLE_TEX2DARRAY(SpaltWeightTex, float3(IN.tc_Control, id/4)), id % 4);
-
-  // 
-   mixedDiffuse.rgb=  colorR*(1-weightG-weightB)+colorG*weightG +colorB*weightB; 
-   mixedDiffuse.a=1;
-     
-    
-    //法线少采样一张 一般也够表达效果 因为 3种半透明区域 法线已经减弱了
-    
-        fixed4 nrm = 0.0f;
-        nrm += saturate(1-weightG)* UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvR);
-        nrm += weightG * UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvG);
         
-        mixedNormal = UnpackNormal(nrm);
-  
-       
-  
-}
+
+     //计算第一重要 相邻4个点颜色
+     float3 uvR = float3(initScale, id);//
+     half3 colorR = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvR)* (1-splat_control.b);
+     if (needMix) {
+         int id_0_1 = (int)(splat_control_0_1.r * 16 + 0.5);
+         float3 uvR_0_1 = float3(initScale, id_0_1);//
+         half3 colorR_0_1 = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvR_0_1) * (1 - splat_control_0_1.b);
+
+         int id_1_0 = (int)(splat_control_1_0.r * 16 + 0.5);
+         float3 uvR_1_0 = float3(initScale, id_1_0);//
+         half3 colorR_1_0 = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvR_1_0) * (1 - splat_control_1_0.b);
+
+         int id_1_1 = (int)(splat_control_1_1.r * 16 + 0.5);
+         float3 uvR_1_1 = float3(initScale, id_1_1);//
+         half3 colorR_1_1 = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvR_1_1) * (1 - splat_control_1_1.b);
+         //计算双线性插值
+         half2 uv_frac = frac((IN.tc_Control + offsetFix) * 1024);
+         half3 mixedColorR = lerp(lerp(colorR, colorR_1_0, uv_frac.x), lerp(colorR_0_1, colorR_1_1, uv_frac.x), uv_frac.y);
+
+         //计算第二重要 相邻4个点颜色
+         id = (int)(splat_control.g * 16 + 0.5);
+         float3 uvG = float3(initScale, id);//
+         half3 colorG = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvG) * splat_control.b;
+
+         id_0_1 = (int)(splat_control_0_1.g * 16 + 0.5);
+         float3 uvG_0_1 = float3(initScale, id_0_1);//
+         half3 colorG_0_1 = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvG_0_1) * splat_control_0_1.b;
+
+         id_1_0 = (int)(splat_control_1_0.g * 16 + 0.5);
+         float3 uvG_1_0 = float3(initScale, id_1_0);//
+         half3 colorG_1_0 = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvG_1_0) * splat_control_1_0.b;
+
+         id_1_1 = (int)(splat_control_1_1.g * 16 + 0.5);
+         float3 uvG_1_1 = float3(initScale, id_1_1);//
+         half3 colorG_1_1 = UNITY_SAMPLE_TEX2DARRAY(AlbedoAtlas, uvG_1_1) * splat_control_1_1.b;
+         //计算双线性插值
+         half3 mixedColorG = lerp(lerp(colorG, colorG_1_0, uv_frac.x), lerp(colorG_0_1, colorG_1_1, uv_frac.x), uv_frac.y);
+
+         half weightG = 0;
+
+         mixedDiffuse.rgb = mixedColorR + mixedColorG;// *(1 - weightG - weightB) + colorG * weightG + colorB * weightB;
+         mixedDiffuse.a = 0;//smoothness
+
+
+         //法线只采样占比最高的那张
+
+
+         fixed4  nrm = UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvR);
+         fixed4  nrm_0_1 = UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvR_0_1);
+         fixed4  nrm_1_0 = UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvR_1_0);
+         fixed4  nrm_1_1 = UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvR_1_1);
+
+         nrm = lerp(lerp(nrm, nrm_1_0, uv_frac.x), lerp(nrm_0_1, nrm_1_1, uv_frac.x), uv_frac.y);
+
+         mixedNormal = UnpackNormal(nrm);
+     }
+     else {
+         mixedDiffuse.rgb = colorR;// *(1 - weightG - weightB) + colorG * weightG + colorB * weightB;
+         mixedDiffuse.a = 0;//smoothness
+         mixedNormal = UnpackNormal(UNITY_SAMPLE_TEX2DARRAY(NormalAtlas, uvR));
+     }
+
+
+ }
+ 
 
 #ifndef TERRAIN_SURFACE_OUTPUT
     #define TERRAIN_SURFACE_OUTPUT SurfaceOutput

@@ -9,12 +9,11 @@ using UnityEngine;
 
 public class FastTerrain : MonoBehaviour
 {
-     public Texture2DArray albedoAtlas;
-    public Texture2DArray normalAtlas;
+    public Texture2DArray albedoAtlas;
+    //public Texture2DArray normalAtlas;
 
-    //slplat 区分id和Weight 主要是因为 id不能插值 但weight需要插值 如果分辨率精度够大 point 采样够平滑 就不需要分2张
+    //splat r存放占比最大的那个地表索引，g存放占比第二大的那个地表索引 b存放g的占比 ，1-b=r的占比（丢弃第3重要图层都算给第一重要图层）
     public Texture2D splatID;
-    public Texture2DArray splatWeight;
     public Shader terrainShader;
     public TerrainData normalTerrainData;//{ get { return GetComponent<Terrain>().terrainData; } }
     public TerrainData empytTerrainData;
@@ -47,7 +46,7 @@ public class FastTerrain : MonoBehaviour
                 }
                 //for (int k = 0; k < normalTerrainData.splatPrototypes[index].normalMap.mipmapCount; k++)
                 //{
-                    //Graphics.CopyTexture(normalTerrainData.splatPrototypes[index].normalMap, 0, k, normalAtlas, index, k);
+                //    Graphics.CopyTexture(normalTerrainData.splatPrototypes[index].normalMap, 0, k, normalAtlas, index, k);
  
                 //}
      
@@ -62,17 +61,13 @@ public class FastTerrain : MonoBehaviour
     {
         public int id;
         public float weight;
-        public float nearWeight;
-    }
+     }
 
 
     [ContextMenu("MakeSplat")]
     // Update is called once per frame
     void MakeSplat()
     {
-      
-
-         
         int wid = normalTerrainData.alphamapTextures[0].width;
         int hei = normalTerrainData.alphamapTextures[0].height;
         List<Color[]> colors = new List<Color[]>();
@@ -87,7 +82,8 @@ public class FastTerrain : MonoBehaviour
         splatID.filterMode = FilterMode.Point;
 
         var splatIDColors = splatID.GetPixels();
-  
+
+   
  
         for (int i = 0; i < hei; i++)
         {
@@ -102,37 +98,34 @@ public class FastTerrain : MonoBehaviour
                     SplatData sd;
                     sd.id = k * 4;
                     sd.weight = colors[k][index].r;
-                    sd.nearWeight = getNearWeight(colors[k], index, wid, 0);
+
                     splatDatas.Add(sd);
                     sd.id++;
                     sd.weight = colors[k][index].g;
-                    sd.nearWeight = getNearWeight(colors[k], index, wid, 1);
-
+ 
                     splatDatas.Add(sd);
                     sd.id++;
                     sd.weight = colors[k][index].b;
-                    sd.nearWeight = getNearWeight(colors[k], index, wid, 2);
-
+ 
                     splatDatas.Add(sd);
                     sd.id++;
                     sd.weight = colors[k][index].a;
-                    sd.nearWeight = getNearWeight(colors[k], index, wid, 3);
-
+ 
                     splatDatas.Add(sd);
                 }
 
             
                 //按权重排序选出最重要几个
-               splatDatas.Sort((x, y) => -(x.weight+x.nearWeight).CompareTo(y.weight+y.nearWeight));
+               splatDatas.Sort((x, y) => -(x.weight).CompareTo(y.weight));
        
  
 
 
-                //只存最重要3个图层 用一点压缩方案可以一张图存更多图层 ,这里最多支持16张
+                //只存最重要2个图层 用一点压缩方案可以一张图存更多图层 ,这里最多支持16张
                  splatIDColors[index].r = splatDatas[0].id / 16f; //
                  splatIDColors[index].g = splatDatas[1].id / 16f;
-                 splatIDColors[index].b =  splatDatas[2].id / 16f;
-  
+                 splatIDColors[index].b = splatDatas[1].weight;
+               
             }
         }
 
@@ -140,36 +133,12 @@ public class FastTerrain : MonoBehaviour
         splatID.SetPixels(splatIDColors);
         splatID.Apply();
 
-        
-        splatWeight = new Texture2DArray(wid, hei, normalTerrainData.alphamapTextures.Length, normalTerrainData.alphamapTextures[0].format, true, true);
-        splatWeight.filterMode = FilterMode.Bilinear;
-        for (int i = 0; i < normalTerrainData.alphamapTextures.Length; i++)
-        {
-            splatWeight.SetPixels(normalTerrainData.alphamapTextures[i].GetPixels(), i);
 
-         }
-
-        splatWeight.Apply();
+ 
     }
 
 
-    private float getNearWeight(Color[] colors, int index, int wid, int rgba)
-    {
-        float value = 0;
-        for (int i = 1; i <= 2; i++)
-        {
-            value += colors[(index + colors.Length - i) % colors.Length][rgba];
-            value += colors[(index + colors.Length + i) % colors.Length][rgba];
-            value += colors[(index + colors.Length - wid * i) % colors.Length][rgba];
-            value += colors[(index + colors.Length + wid * i) % colors.Length][rgba];
-            value += colors[(index + colors.Length + (-1 - wid) * i) % colors.Length][rgba];
-            value += colors[(index + colors.Length + (-1 + wid) * i) % colors.Length][rgba];
-            value += colors[(index + colors.Length + (1 - wid) * i) % colors.Length][rgba];
-            value += colors[(index + colors.Length + (1 + wid) * i) % colors.Length][rgba];
-        }
-
-        return value / (8 * 2);
-    }
+    
 
 #endif
   
@@ -185,8 +154,7 @@ public class FastTerrain : MonoBehaviour
      
 
         Shader.SetGlobalTexture("SpaltIDTex", splatID);
-        Shader.SetGlobalTexture("SpaltWeightTex", splatWeight);
-        Shader.SetGlobalTexture("AlbedoAtlas", albedoAtlas);
+         Shader.SetGlobalTexture("AlbedoAtlas", albedoAtlas);
         //Shader.SetGlobalTexture("NormalAtlas", normalAtlas);
         
     }
