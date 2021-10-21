@@ -75,7 +75,7 @@ Shader "Nature/Terrain/StandardFast" {
 			SplatmapMix(IN, defaultSmoothness, splat_control, weight, mixedDiffuse, o.Normal);
 			o.Albedo = mixedDiffuse.rgb;
 			o.Alpha = weight;
-			o.Smoothness = mixedDiffuse.a;
+			//o.Smoothness = mixedDiffuse.a;
 			o.Metallic = dot(splat_control, half4(_Metallic0, _Metallic1, _Metallic2, _Metallic3));
 		}
 		ENDCG
