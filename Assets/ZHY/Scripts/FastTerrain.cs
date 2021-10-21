@@ -16,11 +16,7 @@ public class FastTerrain : MonoBehaviour
     public Texture2D splatWeight;
     public Shader terrainShader;
     public TerrainData normalTerrainData;
-<<<<<<< Updated upstream
-    public TerrainData emptyTerrainData;
-=======
     public TerrainData empytTerrainData;
->>>>>>> Stashed changes
     [ContextMenu("MakeAlbedoAtlas")]
     // Update is called once per frame
     void MakeAlbedoAtlas()
@@ -197,7 +193,7 @@ public class FastTerrain : MonoBehaviour
     void useFastMode()
     {
         Terrain t = GetComponent<Terrain>();
-        t.terrainData = emptyTerrainData;
+        t.terrainData = empytTerrainData;
        
         t.materialType = Terrain.MaterialType.Custom;
         if (t.materialTemplate == null)
